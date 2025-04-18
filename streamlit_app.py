@@ -18,18 +18,19 @@ This application predicts whether a person has a high or low risk of diabetes
 based on diagnostic measurements. Enter your information below and click 'Predict'.
 """)
 
-# Create a function to load the model
+# Create a function to load the model and scaler
 @st.cache_resource
-def load_model():
+def load_model_and_scaler():
     try:
         model = joblib.load('diabetes_model.pkl')
-        return model
-    except FileNotFoundError:
-        st.error("Model file not found. Please ensure 'diabetes_model.pkl' is in the current directory.")
-        return None
+        scaler = joblib.load('scaler.pkl')
+        return model, scaler
+    except FileNotFoundError as e:
+        st.error(f"Required file not found: {e.filename}. Please make sure both 'diabetes_model.pkl' and 'scaler.pkl' are in the current directory.")
+        return None, None
 
-# Load the model
-model = load_model()
+# Load the model and scaler
+model, scaler = load_model_and_scaler()
 
 # Create input form
 st.subheader("Patient Information")
@@ -55,7 +56,7 @@ predict_button = st.button('Predict', type='primary')
 # Make prediction when the button is clicked
 if predict_button:
     try:
-        if model is not None:
+        if model is not None and scaler is not None:
             # Format input data as numpy array
             input_data = np.array([
                 pregnancies, glucose, blood_pressure, skin_thickness,
@@ -71,8 +72,11 @@ if predict_button:
             })
             st.dataframe(input_df, hide_index=True)
             
+            # Scale the input data
+            input_data_scaled = scaler.transform(input_data)
+
             # Make prediction
-            prediction = model.predict(input_data)
+            prediction = model.predict(input_data_scaled)
             
             # Display result
             st.subheader("Prediction Result")
